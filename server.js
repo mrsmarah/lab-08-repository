@@ -12,43 +12,13 @@ const superagent = require('superagent');
 const PORT = process.env.PORT || 4000;
 const app = express(); //creating the server, waiting for the app.listen
 const client = new pg.Client(process.env.DATABASE_URL);// CONNECT (DB) to the (psql) using url
-
-client.on('error', (err) => {
-  throw new Error(err);
-});
-
 app.use(cors());//will respond to any request
 
-// GET data from QUERY & INSERT it to the DATABASE
-app.get('/add', (req, res) => {
-  let search_query  = req.query.search_query;
-  let formatted_query = req.query.formatted_query;
-  let  latitude  = req.query. latitude;
-  let longitude = req.query.longitude;
-  const SQL = 'INSERT INTO locations(search_query,formatted_query,latitude,longitude) VALUES ($1,$2,$3,$4) RETURNING *';
-  const safeValues = [search_query, formatted_query, latitude, longitude];
-  client
-    .query(SQL, safeValues)
-    .then((results) => {
-      res.status(200).json(results.rows);
-    })
-    .catch((err) => {
-      res.status(500).send(err);
-    });
-});
 
-// GET data from DATABASE
-app.get('/locations', (req, res) => {
-  const SQL = 'SELECT * FROM locations;';
-  client
-    .query(SQL)
-    .then((results) => {
-      res.status(200).json(results.rows);
-    })
-    .catch((err) => {
-      res.status(500).send(err);
-    });
-});
+// client.on('error', (err) => { //CHECK THIS 
+//   throw new Error(err);
+// });
+
 
 // API Main Route:
 app.get('/', (request, response) => {
@@ -63,15 +33,29 @@ app.use('*', notFoundHandler);
 app.use(errorHandler);
 
 // Route Handlers:
+
 function locationHandler(request, response) {
+  //GET data from DATABASE(if any)
   const city = request.query.city;
-  superagent(
-    `https://eu1.locationiq.com/v1/search.php?key=${process.env.GEOCODE_API_KEY}&q=${request.query.city}&format=json`
-  )
-    .then((res) =>{
-      const geoData = res.body;
-      const locationData = new Location(city, geoData);
-      response.status(200).json(locationData);
+  const SQL = 'SELECT * FROM location WHERE search_query = $1';
+  const values = [city];
+  client.query(SQL,values).then((results) => {
+      if (results.rows.length > 0){
+        response.status(200).json(results.rows[0]);
+      }else{
+        superagent(
+          `https://eu1.locationiq.com/v1/search.php?key=${process.env.GEOCODE_API_KEY}&q=${request.query.city}&format=json`
+      ).then((res) =>{
+          const geoData = res.body;
+          const locationData = new Location(city, geoData);
+          // GET data from QUERY & INSERT it to the DATABASE
+          const SQL = 'INSERT INTO locations(search_query,formatted_query,latitude,longitude) VALUES ($1,$2,$3,$4) RETURNING *';
+          const safeValues = [locationData.search_query, locationData.formatted_query, locationData. latitude, locationData.longitude];
+          client.query(SQL, safeValues).then((results) => {
+            response.status(200).json(results.rows[0]);
+            });
+      });
+    }
     })
     .catch((err) => errorHandler(err, request, response));
 }
@@ -138,9 +122,7 @@ function errorHandler(error, request, response) {
 }
 
 //Server is listening for requests ///IF NO ERRORS/// :
-client
-.connect()
-.then(() => {
+client.connect().then(() => {
     app.listen(PORT, () =>
       console.log(`my server is up and running on port ${PORT}`)
     );
