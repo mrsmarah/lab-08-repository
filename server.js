@@ -71,8 +71,6 @@ function locationHandler(request, response) {
     }
     })
     .catch((err) => errorHandler(err, request, response));
-
-
   }
 
     
@@ -129,18 +127,6 @@ function Trail(trailData) {
   this.condition_time = trailData.conditionDate.split(" ")[1];
 }
 
-function Movie(movieData) {
-  this.name = trailData.name;
-  this.location = trailData.location;
-  this.length = trailData.length;
-  this.stars = trailData.stars;
-  this.stars_votes = trailData.starsVotes;
-  this.summary = trailData.summary;
-  this.trail_url = trailData.url;
-  this.conditions = trailData.conditionDetails;
-  this.condition_date = trailData.conditionDate.split(" ")[0];
-  this.condition_time = trailData.conditionDate.split(" ")[1];
-}
 //Error Handlers:
 function notFoundHandler(request, response) {
   response.status(404).send('NOT FOUND!!');
