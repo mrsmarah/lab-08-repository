@@ -35,6 +35,19 @@ app.use(errorHandler);
 // Route Handlers:
 
 function locationHandler(request, response) {
+  // const city = request.query.city;
+  // superagent(
+  //   `https://eu1.locationiq.com/v1/search.php?key=${process.env.GEOCODE_API_KEY}&q=${request.query.city}&format=json`
+  // )
+  //   .then((res) => {
+  //     const geoData = res.body;
+  //     const locationData = new Location(city, geoData);
+  //     response.status(200).json(locationData);
+  //   })
+  //   .catch((err) => errorHandler(err, request, response));
+  
+
+
   //GET data from DATABASE(if any)
   const city = request.query.city;
   const SQL = 'SELECT * FROM location WHERE search_query = $1';
@@ -49,7 +62,7 @@ function locationHandler(request, response) {
           const geoData = res.body;
           const locationData = new Location(city, geoData);
           // GET data from QUERY & INSERT it to the DATABASE
-          const SQL = 'INSERT INTO locations(search_query,formatted_query,latitude,longitude) VALUES ($1,$2,$3,$4) RETURNING *';
+          const SQL = 'INSERT INTO location(search_query,formatted_query,latitude,longitude) VALUES ($1,$2,$3,$4) RETURNING *';
           const safeValues = [locationData.search_query, locationData.formatted_query, locationData. latitude, locationData.longitude];
           client.query(SQL, safeValues).then((results) => {
             response.status(200).json(results.rows[0]);
@@ -58,14 +71,17 @@ function locationHandler(request, response) {
     }
     })
     .catch((err) => errorHandler(err, request, response));
-}
+
+
+  }
+
     
 function weatherHandler(request, response) {
   superagent(
     `https://api.weatherbit.io/v2.0/forecast/daily?city=${request.query.search_query}&key=${process.env.WEATHER_API_KEY}`
     )
     .then((skyData) => {
-      console.log(skyData); 
+      // console.log(skyData); 
       const weatherDataArr = skyData.body.data.map((day) => {
         return new Weather(day);
       });
@@ -113,6 +129,18 @@ function Trail(trailData) {
   this.condition_time = trailData.conditionDate.split(" ")[1];
 }
 
+function Movie(movieData) {
+  this.name = trailData.name;
+  this.location = trailData.location;
+  this.length = trailData.length;
+  this.stars = trailData.stars;
+  this.stars_votes = trailData.starsVotes;
+  this.summary = trailData.summary;
+  this.trail_url = trailData.url;
+  this.conditions = trailData.conditionDetails;
+  this.condition_date = trailData.conditionDate.split(" ")[0];
+  this.condition_time = trailData.conditionDate.split(" ")[1];
+}
 //Error Handlers:
 function notFoundHandler(request, response) {
   response.status(404).send('NOT FOUND!!');
